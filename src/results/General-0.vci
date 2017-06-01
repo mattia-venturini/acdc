@@ -1,0 +1,30 @@
+file 3722 1496162494                                            
+version 2
+run General-0-20170530-18:40:54-2992
+attr configname General
+attr datetime 20170530-18:40:54
+attr experiment General
+attr inifile omnetpp.ini
+attr iterationvars ""
+attr iterationvars2 $repetition=0
+attr measurement ""
+attr network Network
+attr processid 2992
+attr repetition 0
+attr replication #0
+attr resultdir results
+attr runnumber 0
+attr seedset 0
+
+vector 0  Network.peer0  ""  ETV
+vector 1  Network.peer0  ""  ETV
+vector 2  Network.peer1  ""  ETV
+vector 3  Network.peer1  ""  ETV
+vector 4  Network.peer2  ""  ETV
+vector 5  Network.peer2  ""  ETV
+0	1170 537 0 119 0 14.801381685189 16 0 2.497195967507 13.778799810491 22.279014869394
+1	1707 360 0 111 0 14.063577778521 11 0 0.172772303002 0.986296069531 0.12126037314862
+2	2067 362 0 113 0 14.410106454497 11 0 0.452178697514 2.53608051683 0.80937926384612
+3	2429 360 0 112 0 14.214762058459 11 0 0.206587748214 1.179336505541 0.17337232748824
+4	2789 396 0 114 0 14.451141925138 12 0 0.225813428336 1.411977203764 0.22637717372455
+5	3185 537 0 116 0 14.711827398394 16 0 2.468898665358 13.539080292253 21.657799120704
