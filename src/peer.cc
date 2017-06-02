@@ -19,33 +19,50 @@ using namespace std;
 
 namespace acdc {
 
+/* Modulo: Peer
+ *
+ * Rappresenta un nodo in una rete P2P. Genera continuamente messaggi in un tempo casuale e li manda in broadcast.
+ * Per gli utlimi NCHAMPIONS messaggi ricevuti memorizza il ritardo di trasmissione (servendosi del timestamp), per ogni altro nodo.
+ *
+ * Se è il leader della rete, controlla se un certo nodo sta effettuando un Look-ahead cheat, servendosi del metodo ACDC.
+ * In caso affermativo chiede di verificare anche ad un altro nodo (che diventerà il nuovo leader), in caso negativo verifica un altro nodo.
+ * Comunque cede il privilegio di leader dopo un certo timeout.
+ *
+ * Se è un cheater, memorizza per un certo tempo i timestamp degli avversari, ed effettua la mossa ponendone uno inferiore ad essi.
+ */
+
 Define_Module(Peer);
 
 
 // inizializza
 void Peer::initialize()
 {
-    int n_peers = gateSize("gate");     // numero di peers = numero di collegamenti (rete fortemente connessa)
-    diff = new simtime_t[n_peers];      // latenza media messaggi dai peers
-    diffVector = new cOutVector[n_peers]; // per vedere statistiche
+    nPeers = gateSize("gate");     // numero di peers = numero di collegamenti (rete fortemente connessa)
 
-    for(int j=0; j<n_peers; j++)
+    latencies = new simtime_t[NCHAMPIONS];    // latenze degli ultimi NCHAMPIONS messaggi
+    index = 0;              // prima posizione
+    averageLatency = 0;     // latenza media messaggi dai peers
+    oldSuspectedLatency = 0;    // latenza precendente al contrattacco
+
+    // inizializzo ogni elemento del campione
+    for(int j = 0; j < NCHAMPIONS; j++)
     {
-        diff[j] = 0;
-        diffVector[j].record(0);
+        latencies[j] = 0;
+        diffVector.record(0);
     }
 
     if(strcmp(getName(),"peer0") == 0)  // il primo peer parte come leader
     {
         leader = true;
+        doCA = false;    // non effettuare ACDC finché non ho abbastanza dati sulle latenze
         suspectedNode = 0;
 
         // imposta la scadenza del tempo come leader
         cMessage *timeout = new cMessage();
         timeout->setKind(TIMEOUT_LEADER);
-        scheduleAt(simTime()+TLeader, timeout);
+        scheduleAt(simTime()+TIME_LEADER, timeout);
 
-        //startCounterAttack();
+        // counterAttack();
     }
     else if(par("cheater"))
     {
@@ -63,64 +80,139 @@ void Peer::handleMessage(cMessage *msg)
     {
         if(msg->getKind() == TIMEOUT_LEADER)   // timeout del leader
         {
+            leader = false;
+            delay = 1;
+
+            // invio il token ad un altro nodo casuale
             cMessage *token = new cMessage();
             token->setKind(TOKEN_LEADER);
-            send(token, "gate$o", 0);
+
+            int nextLeader = random->intRand() % nPeers;
+            send(token, "gate$o", nextLeader);
+
+            printf("%f: Token riasciato per timeout. \n", simTime().dbl());
+
+            // avviso tutti che il TOKEN_LEADER è stato rilasciato
+            cMessage *infoMsg = new cMessage();
+            infoMsg->setKind(INFO_TOKEN_RELEASED);
+            sendToAll(infoMsg);
         }
-        else if(msg->getKind() == MSG_ACDC) // messaggio in ritardo per il nodo sospetto
+        else if(msg->getKind() == MSG_ACDC && leader) // messaggio in ritardo per il nodo sospetto
         {
+            // NB: potrebbe aver ceduto il TOKEN_LEADER nel frattempo, quindi verifico se sono ancora leader
             send(msg->dup(), "gate$o", suspectedNode);
         }
         else if(par("cheater") && msg->getKind() == MSG_CHEATEDMOVE)    // mossa del cheater
         {
             cheatedMove();
         }
-        else       // nuovo messaggio comune
+        else if(msg->getKind() == MSG_TYPE_A)    // spedizione di nuovo messaggio comune
         {
             msg->setTimestamp();
 
             sendToAll(msg);             // invia a tutti i nodi
-            if(leader)
-                startCounterAttack(msg);    // ma al nodo sospetto lo schedula per mandarlo il ritardo
 
-            scheduleNextMessage();      // avvia generazione causale del prossimo evento
+            scheduleNextMessage();      // avvia generazione casuale del prossimo evento
         }
     }
+    // messaggio ricevuto da un altro nodo
     else if(msg->getKind() == TOKEN_LEADER) // token che mi rende il leader
     {
+        printf("%s è il nuovo LEADER!\n", getName());
+
         leader = true;
-        suspectedNode = 0;
+        doCA = false;
+        suspectedNode = 0;  // TODO: ricevere un sospetto da verificare
+
+        // inizializzo le latenze per il nodo sospetto, così da vederne il cambiamento
+        oldSuspectedLatency = 0;
+        averageLatency = 0;
 
         // imposta la scadenza del tempo come leader
         cMessage *timeout = new cMessage();
         timeout->setKind(TIMEOUT_LEADER);
-        scheduleAt(simTime()+TLeader, timeout);
+        scheduleAt(simTime()+TIME_LEADER, timeout);
 
-        //startCounterAttack();
     }
     else    // messaggio generico
     {
-        // aggiorno la stima della latenza media sul canale
         int numGate = msg->getArrivalGate()->getIndex();
-        simtime_t delay = simTime() - msg->getTimestamp();
-        diff[numGate] = (diff[numGate]*(NChampions-1)/NChampions) + (delay/NChampions);
-        diffVector[numGate].record(diff[numGate]);  // raccolta dati per statistiche
 
-        if(leader && diff[numGate] >= threshold)  // il nodo è etichettato come cheater
+        // il leader processa i messaggi del nodo sospetto
+        if(leader && numGate == suspectedNode)
         {
-            printf("%d è un cheater! Ci mette %f secondi. \n", numGate, delay.dbl());
-            this->delay = 1.0;
+            // calcolo latenza del messaggio
+            simtime_t msgDelay = simTime() - msg->getTimestamp();
+
+            diffVector.record(msgDelay);  // raccolta dati per statistiche
+
+            // aggiungo la nuova (divisa per NCHAMPIONS per essere pronta a far parte della media)
+            msgDelay /= NCHAMPIONS;
+            if(doCA)
+            {
+                // aggiorno la stima della latenza media sul canale
+                oldSuspectedLatency = averageLatency + msgDelay;
+            }
+            else
+            {
+                // aggiorno la stima della latenza media sul canale
+                averageLatency = averageLatency + msgDelay;
+            }
+
+            index++; // incremento index per il prossimo messaggio
+
+            if(index == NCHAMPIONS) // se ho fatto il giro del vettore (e sono il leader)
+            {
+                printf("%s: ritardo medio dal nodo sospetto %d: %f\n", getName(), numGate, msgDelay.dbl());
+
+                if(doCA)
+                {
+                    // verifico se il ritardo medio è aumentato troppo
+                    if(averageLatency >= oldSuspectedLatency + threshold)
+                    {
+                        // THEN: il nodo è etichettato come CHEATER
+
+                        printf("%s: %d è un cheater! averageLatency: %f (old: %f, threshold: %f). \n", getName(), numGate, msgDelay.dbl(),
+                                oldSuspectedLatency.dbl(), threshold.dbl());
+
+                        // rilascia il TOKEN_LEADER ad un terzo nodo
+                        cMessage *token = new cMessage();
+                        token->setKind(TOKEN_LEADER);
+                        int nextLeader;
+                        do
+                        {   // selezione casuale tra i nodi rimanenti
+                            nextLeader = random->intRand() % nPeers;
+                        } while(nextLeader != numGate);
+
+                        send(token, "gate$o", nextLeader);
+
+                        leader = false;
+                        delay = 1.0;
+                        suspectedNode = -1;
+
+                        // DEBUG
+                        printf("%s: TOKEN_LEADER rilasciato. \n", getName());
+
+                        // avviso tutti che il TOKEN_LEADER è stato rilasciato
+                        cMessage *infoMsg = new cMessage();
+                        infoMsg->setKind(INFO_TOKEN_RELEASED);
+                        sendToAll(infoMsg);
+                    }
+                    else    // non ho prove per dire che è un cheater: incremento il delay
+                        counterAttack(msg);    // ma al nodo sospetto lo schedula per mandarlo il ritardo
+                }
+                else
+                    doCA = true;    // ho la latenza media, posso iniziare ad eseguire ACDC
+
+                index = 0;
+            }
         }
 
-        if(par("cheater")) // se è un cheater: memorizza il timestamp minimo ed attende di fare la mossa
+        // se è un cheater: memorizza il timestamp minimo ed attende di fare la mossa
+        if(par("cheater"))
         {
             if(msg->getTimestamp() < minTimestamp || minTimestamp == 0)
                 minTimestamp = msg->getTimestamp();
-
-            /*cMessage *response = new cMessage();
-            response->setTimestamp(msg->getTimestamp() - 1);    // imposta un timestamp inferiore
-
-            sendToAll(response);*/
         }
     }
     delete msg;
@@ -145,7 +237,13 @@ void Peer::sendToAll(cMessage *msg)
 {
     for(int j=0; j<gateSize("gate"); j++)
     {
-        if(!leader || suspectedNode != j)   // il leader ignora il nodo sospetto (lo invierà in ritardo)
+        if(leader && suspectedNode == j && doCA)    // se è leader: messaggio in ritardo per il nodo sospetto
+        {
+            cMessage *msgACDC = msg->dup();
+            msgACDC->setKind(MSG_ACDC);
+            scheduleAt(simTime()+delay, msgACDC);
+        }
+        else    // messaggio per tutti gli altri nodi
         {
             cMessage *copy = msg->dup();
             send(copy, "gate$o", j); // invio il messaggio effettivo, a tutti i nodi
@@ -154,15 +252,12 @@ void Peer::sendToAll(cMessage *msg)
 }
 
 
-// inizia ad inviare messaggi ritardati al nodo sospetto
-void Peer::startCounterAttack(cMessage *msg)
+// incrementa il ritardo al nodo sospetto
+void Peer::counterAttack(cMessage *msg)
 {
-    msg->setKind(MSG_ACDC);
-    scheduleAt(simTime()+delay, msg->dup());
-
     delay *= 1.02;
     //if(delay > 60)
-    //printf("delay: %f\n", delay.dbl()); // errore: raggiunge valori troppo alti, farlo fermare
+    printf("ritardo del leader: %f\n", delay.dbl()); // errore: raggiunge valori troppo alti, farlo fermare
 }
 
 

@@ -19,6 +19,9 @@
 #include <omnetpp.h>
 #include <omnetpp/csimplemodule.h>
 #include <omnetpp/simtime_t.h>
+#include <random>
+
+#define ev   (*cSimulation::getActiveEnvir()) // per mandare output di testo al posto di printf
 
 #define MSG_INFO 0
 #define MSG_TYPE_A 1
@@ -26,8 +29,13 @@
 #define MSG_CHEATEDMOVE 11
 #define TOKEN_LEADER 42
 #define TIMEOUT_LEADER 43
+#define INFO_TOKEN_RELEASED 44
+
+#define NCHAMPIONS 10
+#define TIME_LEADER 20.0
 
 using namespace omnetpp;
+using namespace std;
 
 namespace acdc {
 
@@ -36,18 +44,22 @@ namespace acdc {
  */
 class Peer : public cSimpleModule
 {
+    // costanti comuni a tutti i nodi
   private:
-    static const int NChampions = 40;
-    simtime_t TLeader = 2000.0;
+    cRNG* random = this->getRNG(0);       // RNG preso da omnet, con seme fissato e quindi riproducibile
+    simtime_t delayLimit = 10.0;
+    simtime_t threshold = 1.0;   // soglia oltre cui un nodo è dichiarato cheater
 
   protected:
-    //simtime_t myTstart;
-    //simtime_t *Tstart;
-    simtime_t *diff;    // diff[j] = latenza media dei messaggi da j considerando gli ultimi NChampions messaggi
-    simtime_t threshold = 10.0;   // soglia oltre cui un nodo è dichiarato cheater
+    int nPeers;
+    simtime_t *latencies;      // latenze degli ultimi NCHAMPIONS messaggi giunti dal nodo sospetto
+    int index;                 // posizione in latencies dell'ultimo messaggio ricevuto
+    simtime_t averageLatency;    // latenza media dei messaggi dal nodo sospetto, considerando gli ultimi NCHAMPIONS messaggi
+    simtime_t oldSuspectedLatency;
 
     // variabili utili al leader
     bool leader = false;
+    bool doCA = false;
     int suspectedNode = -1;
     simtime_t delay = 1.0;
 
@@ -60,11 +72,11 @@ class Peer : public cSimpleModule
 
     void scheduleNextMessage();
     void sendToAll(cMessage *msg);
-    void startCounterAttack(cMessage *msg);
+    void counterAttack(cMessage *msg);
     void cheatedMove();
 
   private:      // PER VEDERE STATISTICHE
-    cOutVector *diffVector;
+    cOutVector diffVector;
 
 };
 
