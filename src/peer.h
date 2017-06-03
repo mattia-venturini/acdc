@@ -74,6 +74,7 @@ class Peer : public cSimpleModule
     void sendToAll(cMessage *msg);
     void counterAttack(cMessage *msg);
     void cheatedMove();
+    void checkLatency(cMessage *msg, int numGate);
 
   private:      // PER VEDERE STATISTICHE
     cOutVector diffVector;
