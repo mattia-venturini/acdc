@@ -39,6 +39,16 @@ void Peer::initialize()
 {
     nPeers = gateSize("gate");     // numero di peers = numero di collegamenti (rete fortemente connessa)
 
+    idPeers = new int[nPeers];
+
+    // costruisce il vettore di id dei peers
+    for(int i = 0; i < nPeers; i++)
+    {
+        cModule *suspModule = gate("gate$o", i)->getPathEndGate()->getOwnerModule();
+        int id = suspModule->getId();
+        idPeers[i] = id;
+    }
+
     latencies = new simtime_t[NCHAMPIONS];    // latenze degli ultimi NCHAMPIONS messaggi
     index = 0;              // prima posizione
     averageLatency = 0;     // latenza media messaggi dai peers
@@ -122,7 +132,24 @@ void Peer::handleMessage(cMessage *msg)
 
         leader = true;
         doCA = false;
-        suspectedNode = 0;  // TODO: ricevere un sospetto da verificare
+
+        suspectedNode = 0;  // valore di default in caso non ci siano sospetti
+
+        // ricevere l'id del sospetto da verificare
+        if(msg->hasPar("suspectedNode"))
+        {
+            int suspId = msg->par("suspectedNode").longValue();
+
+            // cerca l'id nell'array, per sapere a quale uscita del gate è collegato
+            for(int i = 0; i < nPeers; i++)
+            {
+                if (suspId == idPeers[i])
+                {
+                    suspectedNode = i;
+                    break;
+                }
+            }
+        }
 
         // inizializzo le latenze per il nodo sospetto, così da vederne il cambiamento
         oldSuspectedLatency = 0;
@@ -214,6 +241,7 @@ void Peer::cheatedMove()
     scheduleAt(simTime()+intervalS, endInterval);
 }
 
+
 /*
  * Calcola la latenza di un messaggio, la stima di latenza media e verifica se è un (probabile) cheater
  */
@@ -229,19 +257,20 @@ void Peer::checkLatency(cMessage *msg, int numGate)
     if(doCA)
     {
         // aggiorno la stima della latenza media sul canale
-        oldSuspectedLatency = averageLatency + msgDelay;
+        averageLatency = averageLatency + msgDelay;
     }
     else
     {
         // aggiorno la stima della latenza media sul canale
-        averageLatency = averageLatency + msgDelay;
+        oldSuspectedLatency = averageLatency + msgDelay;
     }
 
     index++; // incremento index per il prossimo messaggio
 
     if(index == NCHAMPIONS) // se ho fatto il giro del vettore (e sono il leader)
     {
-        printf("%s: ritardo medio dal nodo sospetto %d: %f\n", getName(), numGate, msgDelay.dbl());
+        printf("%s: ritardo medio dal nodo sospetto %d: %f (old: %f, threshold: %f). \n", getName(), numGate, msgDelay.dbl(),
+                oldSuspectedLatency.dbl(), threshold.dbl());
 
         if(doCA)
         {
@@ -260,7 +289,16 @@ void Peer::checkLatency(cMessage *msg, int numGate)
                 do
                 {   // selezione casuale tra i nodi rimanenti
                     nextLeader = random->intRand() % nPeers;
-                } while(nextLeader != numGate);
+                } while(nextLeader == numGate); // se ho preso il cheater riprovo
+
+                // ricavo, a partire da numGate, l'ID del nodo a cui sono collegato
+                int suspId = idPeers[numGate];
+
+                // aggiunge il nome del nodo sospetto come parametro del token
+                //cMsgPar param = token->addPar("suspectedNode");
+                cMsgPar *param = new cMsgPar("suspectedNode");
+                param->setLongValue(suspId);
+                token->addPar(param);
 
                 send(token, "gate$o", nextLeader);
 

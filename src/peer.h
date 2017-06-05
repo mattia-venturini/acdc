@@ -31,8 +31,8 @@
 #define TIMEOUT_LEADER 43
 #define INFO_TOKEN_RELEASED 44
 
-#define NCHAMPIONS 10
-#define TIME_LEADER 20.0
+#define NCHAMPIONS 6
+#define TIME_LEADER 40.0
 
 using namespace omnetpp;
 using namespace std;
@@ -51,7 +51,9 @@ class Peer : public cSimpleModule
     simtime_t threshold = 1.0;   // soglia oltre cui un nodo è dichiarato cheater
 
   protected:
-    int nPeers;
+    int nPeers;     // numero di Peer a cui è connesso
+    int *idPeers;    // memorizza per ogni gate l'id del Peer a cui connette
+
     simtime_t *latencies;      // latenze degli ultimi NCHAMPIONS messaggi giunti dal nodo sospetto
     int index;                 // posizione in latencies dell'ultimo messaggio ricevuto
     simtime_t averageLatency;    // latenza media dei messaggi dal nodo sospetto, considerando gli ultimi NCHAMPIONS messaggi
