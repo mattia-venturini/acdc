@@ -24,13 +24,13 @@
 #include "StrategyCA.h"
 #include "StrategyIncrease.h"
 
-#define MSG_INFO 0
-#define MSG_TYPE_A 1
-#define MSG_ACDC 10
-#define MSG_CHEATEDMOVE 11
-#define TOKEN_LEADER 42
-#define TIMEOUT_LEADER 43
-#define INFO_TOKEN_RELEASED 44
+#define MSG_COMMON 1        // verde
+#define MSG_ACDC 2          // blu
+#define MSG_CHEATEDMOVE 3   // rosso
+#define TOKEN_LEADER 4      // giallo
+#define TIMEOUT_LEADER 5        // azzurro
+#define INFO_TOKEN_RELEASED 6       // fucsia
+#define INFO_CHEATER_DETECTED 7     // nero
 
 #define TIME_LEADER 40.0
 
@@ -51,11 +51,13 @@ class Peer : public cSimpleModule
   protected:
     int nPeers;     // numero di Peer a cui è connesso
     int *idPeers;    // memorizza per ogni gate l'id del Peer a cui connette
+    bool *activeLink;   // per ogni gate indica se il nodo è ritenuto onesto (true) o cheater (false)
 
     StrategyCA *strategy;
 
     // variabili utili al leader
     bool leader = false;
+    int references;   // numero di nodi che hanno etichettato un sospetto come cheater
 
     // variabili per il cheater
     simtime_t intervalS = 1;    // finestra di tempo in cui raccoglie messaggi prima di decidere la propria mossa

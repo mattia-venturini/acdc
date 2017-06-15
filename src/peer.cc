@@ -40,15 +40,22 @@ void Peer::initialize()
     nPeers = gateSize("gate");     // numero di peers = numero di collegamenti (rete fortemente connessa)
 
     idPeers = new int[nPeers];
+    activeLink = new bool[nPeers];
+
+    references = 0;
 
     strategy = new StrategyIncrease();
 
-    // costruisce il vettore di id dei peers
+    // inizializza vettori
     for(int i = 0; i < nPeers; i++)
     {
+        // costruisce il vettore di id dei peers
         cModule *suspModule = gate("gate$o", i)->getPathEndGate()->getOwnerModule();
         int id = suspModule->getId();
         idPeers[i] = id;
+
+        // costruisce il vettore activeLink
+        activeLink[i] = true;
     }
 
     if(strcmp(getName(),"peer0") == 0)  // il primo peer parte come leader
@@ -73,7 +80,8 @@ void Peer::initialize()
 // gestisce un messaggio in ingresso
 void Peer::handleMessage(cMessage *msg)
 {
-    if(msg->isSelfMessage())    // inviato da sé stesso per schedulare un evento futuro
+    // inviato da sé stesso per schedulare un evento futuro
+    if(msg->isSelfMessage())
     {
         if(msg->getKind() == TIMEOUT_LEADER)   // timeout del leader
         {
@@ -102,7 +110,7 @@ void Peer::handleMessage(cMessage *msg)
         {
             cheatedMove();
         }
-        else if(msg->getKind() == MSG_TYPE_A)    // spedizione di nuovo messaggio comune
+        else if(msg->getKind() == MSG_COMMON)    // spedizione di nuovo messaggio comune
         {
             msg->setTimestamp();
 
@@ -111,6 +119,7 @@ void Peer::handleMessage(cMessage *msg)
             scheduleNextMessage();      // avvia generazione casuale del prossimo evento
         }
     }
+
     // messaggio ricevuto da un altro nodo
     else if(msg->getKind() == TOKEN_LEADER) // token che mi rende il leader
     {
@@ -130,21 +139,46 @@ void Peer::handleMessage(cMessage *msg)
             {
                 if (suspId == idPeers[i])
                 {
-                    strategy->setNewSuspect(i);
+                    if(strategy->suspectedNode == i)    // nodo già verificato da me
+                    {
+                        // ri-passa il token
+                        leader = false;
+
+                        int nextLeader;
+                        do
+                        {   // selezione casuale tra i nodi rimanenti
+                            nextLeader = random->intRand() % nPeers;
+                        } while(nextLeader == i); // se ho preso il cheater riprovo
+
+                        send(msg->dup(), "gate$o", nextLeader);
+                    }
+                    else
+                    {
+                        // ricavo il numero di references
+                        references = msg->par("references").longValue();
+
+                        strategy->setNewSuspect(i);     // inizio a verificarlo
+                    }
                     break;
                 }
             }
         }
-
-        // inizializzo le latenze per il nodo sospetto, così da vederne il cambiamento
-        strategy->oldSuspectedLatency = 0;
-        strategy->averageLatency = 0;
 
         // imposta la scadenza del tempo come leader
         cMessage *timeout = new cMessage();
         timeout->setKind(TIMEOUT_LEADER);
         scheduleAt(simTime()+TIME_LEADER, timeout);
 
+    }
+    else if(msg->getKind() == INFO_CHEATER_DETECTED)    // la maggior parte dei peer ha identificato un cheater
+    {
+        // ricevo l'id del cheater
+        int suspId = msg->par("suspectedNode").longValue();
+
+        // individuo la porta a cui è collegato e la disattivo
+        for(int i = 0; i < nPeers; i++)
+            if (suspId == idPeers[i])
+                activeLink[i] = false;
     }
     else    // messaggio generico
     {
@@ -173,14 +207,16 @@ void Peer::scheduleNextMessage()
     if(!par("cheater"))
     {
         cMessage *nextMsg = new cMessage();
-        nextMsg->setKind(MSG_TYPE_A);
+        nextMsg->setKind(MSG_COMMON);
 
         scheduleAt(simTime()+par("generationTime"), nextMsg);
     }
 }
 
 
-// invia un messaggio in broadcast a tutti i nodi, tranne all'eventuale nodo sospetto
+/**
+ * Invia un messaggio in broadcast a tutti i nodi attivi, tranne all'eventuale nodo sospetto
+ */
 void Peer::sendToAll(cMessage *msg)
 {
     for(int j=0; j<gateSize("gate"); j++)
@@ -192,7 +228,7 @@ void Peer::sendToAll(cMessage *msg)
             msgACDC->setKind(MSG_ACDC);
             scheduleAt(simTime()+strategy->delay, msgACDC);
         }
-        else    // messaggio per tutti gli altri nodi
+        else if(activeLink[j])    // messaggio per tutti gli altri nodi (attivi)
         {
             cMessage *copy = msg->dup();
             send(copy, "gate$o", j); // invio il messaggio effettivo, a tutti i nodi
@@ -234,33 +270,72 @@ void Peer::checkLatency(cMessage *msg, int numGate)
     // verifica se il nodo risulta un cheater
     if(strategy->isCheaterDetected() == CHEATER)
     {
-        // THEN: nodo sospetto
+        // THEN: nodo etichettati come cheater
 
-        printf("%s: %d è un cheater! averageLatency: %f (old: %f, threshold: %f). \n", getName(), numGate,
+        printf("%s: %d è un sospetto! averageLatency: %f (old: %f, threshold: %f). \n", getName(), numGate,
                 strategy->averageLatency.dbl(), strategy->oldSuspectedLatency.dbl(), strategy->threshold.dbl());
-
-        // rilascia il TOKEN_LEADER ad un terzo nodo
-        cMessage *token = new cMessage();
-        token->setKind(TOKEN_LEADER);
-        int nextLeader;
-        do
-        {   // selezione casuale tra i nodi rimanenti
-            nextLeader = random->intRand() % nPeers;
-        } while(nextLeader == numGate); // se ho preso il cheater riprovo
 
         // ricavo, a partire da numGate, l'ID del nodo a cui sono collegato
         int suspId = idPeers[numGate];
 
-        // aggiunge il nome del nodo sospetto come parametro del token
-        //cMsgPar param = token->addPar("suspectedNode");
-        cMsgPar *param = new cMsgPar("suspectedNode");
-        param->setLongValue(suspId);
-        token->addPar(param);
+        cMessage *token = new cMessage();
+        token->setKind(TOKEN_LEADER);
 
-        send(token, "gate$o", nextLeader);
+        references++;               // un sospetto in più = nodo corrente
+
+        // verifico se ho raggiunto la maggioranza
+        if(references > nPeers/2)
+        {
+            // THEN: escludo il nodo dalla rete
+
+            printf("CHEATER INDIVIDUATO: %d!\n", suspId);
+
+
+            activeLink[strategy->suspectedNode] = false;    // setto il collegamento come inattivo
+
+            // evidenzia graficamente che un nodo è stato escluso
+            cModule *suspModule = gate("gate$o", numGate)->getPathEndGate()->getOwnerModule();
+            suspModule->getDisplayString().setTagArg("b",3,"red");
+
+            // Segnalo a tutti i nodi la presenza del cheater
+
+            cMessage *infoMsg = new cMessage();
+            infoMsg->setKind(INFO_CHEATER_DETECTED);
+
+            // aggiunge l'ID del nodo sospetto come parametro del token
+            cMsgPar *paramSusp = new cMsgPar("suspectedNode");
+            paramSusp->setLongValue(suspId);
+            infoMsg->addPar(paramSusp);
+
+            sendToAll(infoMsg);
+        }
+        else
+        {
+            // ELSE: chiedo ad altri nodi di verificarlo
+
+            // rilascia il TOKEN_LEADER ad un terzo nodo
+            int nextLeader;
+            do
+            {   // selezione casuale tra i nodi rimanenti
+                nextLeader = random->intRand() % nPeers;
+            } while(nextLeader == numGate); // se ho preso il cheater riprovo
+
+            // aggiunge l'ID del nodo sospetto come parametro del token
+            cMsgPar *paramSusp = new cMsgPar("suspectedNode");
+            paramSusp->setLongValue(suspId);
+            token->addPar(paramSusp);
+
+            // aggiungo il numero di peer che sospetta il nodo
+            cMsgPar *paramRefs = new cMsgPar("references");
+            paramRefs->setLongValue(references);
+            token->addPar(paramRefs);
+
+            send(token, "gate$o", nextLeader);
+        }
+
+        // in ogni caso non sono più leader
 
         leader = false;
-        //suspectedNode = -1;
 
         // DEBUG
         printf("%s: TOKEN_LEADER rilasciato. \n", getName());

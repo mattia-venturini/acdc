@@ -44,25 +44,19 @@ class StrategyCA
     simtime_t delay = 1.0;
 
   public:
-
-    /*bool isDoingCA() { return doCA; }
-
-    int getSuspectedNode() { return suspectedNode; }
-
-    simtime_t getAverageLatency() { return averageLatency; }
-
-    simtime_t getOldAverageLatency() { return oldSuspectedLatency; }
-
-    simtime_t getThreshold() { return threshold; }*/
-
     /**
      * Cambio nodo da verificare
+     * @param node: nuovo nodo
      */
     void setNewSuspect(int node)
     {
         suspectedNode = node;
         doCA = false;
         delay = 1.0;
+
+        // inizializzo le latenze per il nodo sospetto, così da vederne il cambiamento
+        oldSuspectedLatency = 0;
+        averageLatency = 0;
     }
 
     /**
