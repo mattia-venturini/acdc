@@ -129,5 +129,7 @@ depend:
 $O/Txc.o: Txc.cc \
 	Txc.h
 $O/peer.o: peer.cc \
+	StrategyCA.h \
+	StrategyIncrease.h \
 	peer.h
 

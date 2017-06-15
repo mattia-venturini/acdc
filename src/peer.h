@@ -21,7 +21,8 @@
 #include <omnetpp/simtime_t.h>
 #include <random>
 
-#define ev   (*cSimulation::getActiveEnvir()) // per mandare output di testo al posto di printf
+#include "StrategyCA.h"
+#include "StrategyIncrease.h"
 
 #define MSG_INFO 0
 #define MSG_TYPE_A 1
@@ -31,7 +32,6 @@
 #define TIMEOUT_LEADER 43
 #define INFO_TOKEN_RELEASED 44
 
-#define NCHAMPIONS 6
 #define TIME_LEADER 40.0
 
 using namespace omnetpp;
@@ -47,23 +47,15 @@ class Peer : public cSimpleModule
     // costanti comuni a tutti i nodi
   private:
     cRNG* random = this->getRNG(0);       // RNG preso da omnet, con seme fissato e quindi riproducibile
-    simtime_t delayLimit = 10.0;
-    simtime_t threshold = 1.0;   // soglia oltre cui un nodo è dichiarato cheater
 
   protected:
     int nPeers;     // numero di Peer a cui è connesso
     int *idPeers;    // memorizza per ogni gate l'id del Peer a cui connette
 
-    simtime_t *latencies;      // latenze degli ultimi NCHAMPIONS messaggi giunti dal nodo sospetto
-    int index;                 // posizione in latencies dell'ultimo messaggio ricevuto
-    simtime_t averageLatency;    // latenza media dei messaggi dal nodo sospetto, considerando gli ultimi NCHAMPIONS messaggi
-    simtime_t oldSuspectedLatency;
+    StrategyCA *strategy;
 
     // variabili utili al leader
     bool leader = false;
-    bool doCA = false;
-    int suspectedNode = -1;
-    simtime_t delay = 1.0;
 
     // variabili per il cheater
     simtime_t intervalS = 1;    // finestra di tempo in cui raccoglie messaggi prima di decidere la propria mossa

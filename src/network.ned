@@ -39,8 +39,8 @@ network Network
             generationTime = uniform(0.90, 1.50);
         }
     connections:
-        peer0.gate++ <--> DelayChannel {  delay = uniform(0.50s, 1.00s); } <--> peer1.gate++;
-        peer0.gate++ <--> DelayChannel {  delay = uniform(0.50s, 1.00s); } <--> peer2.gate++;
-        peer2.gate++ <--> DelayChannel {  delay = uniform(0.50s, 1.00s); } <--> peer1.gate++;
+        peer0.gate++ <--> DelayChannel {  delay = exponential(1.00s); } <--> peer1.gate++;
+        peer0.gate++ <--> DelayChannel {  delay = exponential(1.00s); } <--> peer2.gate++;
+        peer2.gate++ <--> DelayChannel {  delay = exponential(1.00s); } <--> peer1.gate++;
 }
 
