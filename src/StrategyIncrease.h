@@ -9,8 +9,18 @@
 #define STRATEGYINCREASE_H_
 
 
+/**
+ * Strategia di contrattacco basilare per ACDC
+ */
 class StrategyIncrease : public StrategyCA
 {
+  protected:
+    simtime_t delayLimit = 10.0;
+    simtime_t threshold = 1.0;   // soglia oltre cui un nodo è dichiarato cheater
+
+    simtime_t averageLatency = 0;    // latenza media dei messaggi dal nodo sospetto, considerando gli ultimi NCHAMPIONS messaggi
+    simtime_t oldSuspectedLatency = 0;
+
   public:
     /**
      * COSTRUTTORE
@@ -22,6 +32,23 @@ class StrategyIncrease : public StrategyCA
     {
         delayLimit = CAlimit;
         threshold = gamma;
+    }
+
+    /**
+     * Cambio nodo da verificare
+     * @param node: nuovo nodo
+     */
+    virtual void setNewSuspect(int node)
+    {
+        suspectedNode = node;
+        doCA = false;
+        delay = 1.0;
+
+        // inizializzo le latenze per il nodo sospetto, così da vederne il cambiamento
+        isCheater = UNKNOWN;
+        oldSuspectedLatency = 0;
+        averageLatency = 0;
+        index = 0;
     }
 
     /**

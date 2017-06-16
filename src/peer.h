@@ -23,6 +23,7 @@
 
 #include "StrategyCA.h"
 #include "StrategyIncrease.h"
+#include "StrategyCorrelation.h"
 
 #define MSG_COMMON 1        // verde
 #define MSG_ACDC 2          // blu

@@ -47,9 +47,19 @@ void Peer::initialize()
 
     timeoutLeader = getSystemModule()->par("timeoutLeader");
 
-    simtime_t delayLimit = getSystemModule()->par("delayLimit");
-    simtime_t threshold = getSystemModule()->par("threshold");
-    strategy = new StrategyIncrease(delayLimit, threshold);
+    // selezione parametrica della strategia da usare
+    if(strcmp(getSystemModule()->par("strategy"), "increase") == 0)     // StrategyIncrease
+    {
+        simtime_t delayLimit = getSystemModule()->par("delayLimit");
+        simtime_t threshold = getSystemModule()->par("threshold");
+        strategy = new StrategyIncrease(delayLimit, threshold);
+    }
+    else if(strcmp(getSystemModule()->par("strategy"), "correlation") == 0)     // StrategyCorrelation
+    {
+        int repetitions = getSystemModule()->par("repetitions");
+        double minCorrelation = getSystemModule()->par("minCorrelation");
+        strategy = new StrategyCorrelation(this->getRNG(0), repetitions, minCorrelation);
+    }
 
     // inizializza vettori
     for(int i = 0; i < nLinks; i++)
@@ -111,7 +121,7 @@ void Peer::handleMessage(cMessage *msg)
                 int nextLeader;
                 do
                 {   // selezione casuale tra i nodi rimanenti
-                    nextLeader = random->intRand() % nLinks;
+                    nextLeader = random->intRand(nLinks);
                 } while(!activeLink[nextLeader]); // se ho preso il cheater riprovo
 
                 send(token, "gate$o", nextLeader);
@@ -178,7 +188,7 @@ void Peer::handleMessage(cMessage *msg)
                             int nextLeader;
                             do
                             {   // selezione casuale tra i nodi rimanenti
-                                nextLeader = random->intRand() % nLinks;
+                                nextLeader = random->intRand(nLinks);
                             } while(nextLeader == i || !activeLink[nextLeader]); // se ho preso il cheater riprovo
 
                             send(msg->dup(), "gate$o", nextLeader);
@@ -316,9 +326,6 @@ void Peer::checkLatency(cMessage *msg, int numGate)
     {
         // THEN: nodo etichettati come cheater
 
-        printf("%s: %d è un sospetto! averageLatency: %f (old: %f, threshold: %f). \n", getName(), numGate,
-                strategy->averageLatency.dbl(), strategy->oldSuspectedLatency.dbl(), strategy->threshold.dbl());
-
         // ricavo, a partire da numGate, l'ID del nodo a cui sono collegato
         int suspId = idPeers[numGate];
 
@@ -368,7 +375,7 @@ void Peer::checkLatency(cMessage *msg, int numGate)
             int nextLeader;
             do
             {   // selezione casuale tra i nodi rimanenti
-                nextLeader = random->intRand() % nLinks;
+                nextLeader = random->intRand(nLinks);
             } while(nextLeader == numGate || !activeLink[nextLeader]); // se ho preso un cheater riprovo
 
             // aggiunge l'ID del nodo sospetto come parametro del token

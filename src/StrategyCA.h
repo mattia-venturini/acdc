@@ -28,14 +28,8 @@ using namespace std;
  */
 class StrategyCA
 {
-    // costanti comuni a tutti i nodi
   public:
-    simtime_t delayLimit = 10.0;
-    simtime_t threshold = 1.0;   // soglia oltre cui un nodo è dichiarato cheater
-
     int index = 0;                 // numero di latenze ricevute dall'ultimo incremento di delay
-    simtime_t averageLatency = 0;    // latenza media dei messaggi dal nodo sospetto, considerando gli ultimi NCHAMPIONS messaggi
-    simtime_t oldSuspectedLatency = 0;
 
     // variabili utili al leader
     bool doCA = false;
@@ -48,18 +42,7 @@ class StrategyCA
      * Cambio nodo da verificare
      * @param node: nuovo nodo
      */
-    void setNewSuspect(int node)
-    {
-        suspectedNode = node;
-        doCA = false;
-        delay = 1.0;
-
-        // inizializzo le latenze per il nodo sospetto, così da vederne il cambiamento
-        isCheater = UNKNOWN;
-        oldSuspectedLatency = 0;
-        averageLatency = 0;
-        index = 0;
-    }
+    virtual void setNewSuspect(int node) = 0;   // non implementato
 
     /**
      * Definisce il cambiamento di ritardo da parte del leader
