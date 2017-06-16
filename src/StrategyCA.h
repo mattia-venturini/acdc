@@ -55,8 +55,10 @@ class StrategyCA
         delay = 1.0;
 
         // inizializzo le latenze per il nodo sospetto, così da vederne il cambiamento
+        isCheater = UNKNOWN;
         oldSuspectedLatency = 0;
         averageLatency = 0;
+        index = 0;
     }
 
     /**

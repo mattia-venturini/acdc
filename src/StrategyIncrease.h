@@ -12,12 +12,17 @@
 class StrategyIncrease : public StrategyCA
 {
   public:
-
     /**
      * COSTRUTTORE
      */
     StrategyIncrease()
     { }
+
+    StrategyIncrease(simtime_t CAlimit, simtime_t gamma)
+    {
+        delayLimit = CAlimit;
+        threshold = gamma;
+    }
 
     /**
      * Riceve un ritardo di trasmissione e lo memorizza nel modo utile alla Cheating Detection
@@ -33,12 +38,12 @@ class StrategyIncrease : public StrategyCA
         if(doCA)
         {
             // aggiorno la stima della latenza media sul canale
-            averageLatency = averageLatency + msgDelay;
+            averageLatency += msgDelay;
         }
         else
         {
             // aggiorno la stima della latenza media sul canale
-            oldSuspectedLatency = averageLatency + msgDelay;
+            oldSuspectedLatency += msgDelay;
         }
 
         index++; // incremento index per il prossimo messaggio
@@ -73,7 +78,8 @@ class StrategyIncrease : public StrategyCA
      */
     virtual void counterAttack()
     {
-        delay *= 1.02;
+        delay *= 1.02;      // aumento il delay
+        averageLatency = 0;     // resetto la valutazione della latenza media
 
         //DEBUG
         printf("ritardo del leader: %f\n", delay.dbl());

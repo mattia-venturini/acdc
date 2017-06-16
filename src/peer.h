@@ -47,10 +47,12 @@ class Peer : public cSimpleModule
     // costanti comuni a tutti i nodi
   private:
     cRNG* random = this->getRNG(0);       // RNG preso da omnet, con seme fissato e quindi riproducibile
+    simtime_t timeoutLeader;
 
   protected:
-    int nPeers;     // numero di Peer a cui è connesso
-    int *idPeers;    // memorizza per ogni gate l'id del Peer a cui connette
+    int nActivePeers;   // numero di Peer non cheater
+    int nLinks;         // numero di Peer a cui è connesso
+    int *idPeers;       // memorizza per ogni gate l'id del Peer a cui connette
     bool *activeLink;   // per ogni gate indica se il nodo è ritenuto onesto (true) o cheater (false)
 
     StrategyCA *strategy;
@@ -71,6 +73,7 @@ class Peer : public cSimpleModule
     void counterAttack(cMessage *msg);
     void cheatedMove();
     void checkLatency(cMessage *msg, int numGate);
+    int setSuspectNode();
 
   private:      // PER VEDERE STATISTICHE
     cOutVector diffVector;
