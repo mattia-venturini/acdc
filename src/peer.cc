@@ -45,7 +45,10 @@ void Peer::initialize()
 
     references = 0;
 
+    // parametri di rete
     timeoutLeader = getSystemModule()->par("timeoutLeader");
+    minLatency = getSystemModule()->par("minLatency");
+    maxLatency = getSystemModule()->par("maxLatency");
 
     // selezione parametrica della strategia da usare
     if(strcmp(getSystemModule()->par("strategy"), "increase") == 0)     // StrategyIncrease
@@ -76,7 +79,7 @@ void Peer::initialize()
     if(strcmp(getName(),"peer0") == 0)  // il primo peer parte come leader
     {
         leader = true;
-        // per vedere graficamente il cambiamento
+        // lo coloro di blue
         getDisplayString().setTagArg("b",3,"blue");
 
         strategy->setNewSuspect(setSuspectNode());  // comincia a verificare un nodo
@@ -86,8 +89,11 @@ void Peer::initialize()
         timeout->setKind(TIMEOUT_LEADER);
         scheduleAt(simTime()+TIME_LEADER, timeout);
     }
-    //else
-    //    getDisplayString().setTagArg("b",3,"white");
+    else    // non parte come leader => bianco
+    {
+        leader = false;
+        getDisplayString().setTagArg("b",3,"white");
+    }
 
     if(par("cheater"))
     {
@@ -135,13 +141,17 @@ void Peer::handleMessage(cMessage *msg)
                 sendToAll(infoMsg);
             }
         }
-        else if(msg->getKind() == MSG_ACDC && leader && strategy->suspectedNode >= 0) // messaggio in ritardo per il nodo sospetto
+
+        // messaggio in ritardo per il nodo sospetto
+        else if(msg->getKind() == MSG_ACDC && leader && strategy->suspectedNode >= 0)
         {
             // NB: potrebbe aver ceduto il TOKEN_LEADER nel frattempo, quindi verifico se sono ancora leader
             // NB: potrebbero non esserci sospetti (unico nodo attivo)
             send(msg->dup(), "gate$o", strategy->suspectedNode);
         }
-        else if(par("cheater") && msg->getKind() == MSG_CHEATEDMOVE)    // mossa del cheater
+
+        // mossa del cheater
+        else if(par("cheater") && msg->getKind() == MSG_CHEATEDMOVE)
         {
             cheatedMove();
         }
@@ -158,6 +168,11 @@ void Peer::handleMessage(cMessage *msg)
     // messaggio ricevuto da un altro nodo (attivo)
     else if(activeLink[msg->getArrivalGate()->getIndex()])
     {
+        // DEBUG
+        if(leader && msg->getArrivalGate()->getIndex() == strategy->suspectedNode)
+            printf("ritardo in %s dalla porta %i: %f\n", getName(), msg->getArrivalGate()->getIndex(),
+                simTime().dbl() - msg->getTimestamp().dbl());
+
         // token che mi rende il leader
         if(msg->getKind() == TOKEN_LEADER)
         {
@@ -216,6 +231,7 @@ void Peer::handleMessage(cMessage *msg)
             scheduleAt(simTime()+TIME_LEADER, timeout);
 
         }
+
         // la maggior parte dei peer ha identificato un cheater
         else if(msg->getKind() == INFO_CHEATER_DETECTED)
         {
@@ -230,6 +246,7 @@ void Peer::handleMessage(cMessage *msg)
             references = 0;
             nActivePeers--;
         }
+
         // messaggio generico
         else
         {
@@ -285,6 +302,10 @@ void Peer::sendToAll(cMessage *msg)
         else if(activeLink[j])    // messaggio per tutti gli altri nodi (attivi)
         {
             cMessage *copy = msg->dup();
+
+            // per avere un delay casuale ogni volta
+            ((cDelayChannel*)gate("gate$o", j)->getChannel())->setDelay(uniform(minLatency,maxLatency).dbl());
+
             send(copy, "gate$o", j); // invio il messaggio effettivo, a tutti i nodi
         }
     }
@@ -297,11 +318,15 @@ void Peer::cheatedMove()
     cMessage *move = new cMessage();
 
     if(minTimestamp > 1.0)      // evita di impostare un timestamp negativo
-        move->setTimestamp(minTimestamp -1);    // mossa cheated: timestamp immediatamente inferiore
+        move->setTimestamp(minTimestamp - 0.2);    // mossa cheated: timestamp immediatamente inferiore
     else
         move->setTimestamp();   // nessun messaggio ricevuto: mossa normale
 
+    //printf("Ritardo del cheater: %f\n", (simTime()-minTimestamp).dbl());  // DEBUG
+
     sendToAll(move);
+
+    minTimestamp = simTime()+intervalS; // timestamp "giusto" della prossima mossa
 
     cMessage *endInterval = new cMessage();
     endInterval->setKind(MSG_CHEATEDMOVE);
@@ -316,6 +341,11 @@ void Peer::checkLatency(cMessage *msg, int numGate)
 {
     // calcolo latenza del messaggio
     simtime_t msgDelay = simTime() - msg->getTimestamp();
+
+    // DEBUG
+    double d1 = simTime().dbl();
+    double d2 = msg->getTimestamp().dbl();
+    double d3 = msgDelay.dbl();
 
     diffVector.record(msgDelay);  // raccolta dati per statistiche
 

@@ -49,6 +49,9 @@ class Peer : public cSimpleModule
   private:
     cRNG* random = this->getRNG(0);       // RNG preso da omnet, con seme fissato e quindi riproducibile
     simtime_t timeoutLeader;
+    simtime_t minLatency;
+    simtime_t maxLatency;
+
 
   protected:
     int nActivePeers;   // numero di Peer non cheater
@@ -63,7 +66,7 @@ class Peer : public cSimpleModule
     int references;   // numero di nodi che hanno etichettato un sospetto come cheater
 
     // variabili per il cheater
-    simtime_t intervalS = 1;    // finestra di tempo in cui raccoglie messaggi prima di decidere la propria mossa
+    simtime_t intervalS = 0.8;    // finestra di tempo in cui raccoglie messaggi prima di decidere la propria mossa
     simtime_t minTimestamp = 0.0;
 
     virtual void initialize();

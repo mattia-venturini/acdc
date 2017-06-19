@@ -15,6 +15,8 @@
 class StrategyIncrease : public StrategyCA
 {
   protected:
+    double increaseFactor = 1.2;    // fattore moltiplicativo con cui si incrementa il delay
+
     simtime_t delayLimit = 10.0;
     simtime_t threshold = 1.0;   // soglia oltre cui un nodo è dichiarato cheater
 
@@ -42,7 +44,7 @@ class StrategyIncrease : public StrategyCA
     {
         suspectedNode = node;
         doCA = false;
-        delay = 1.0;
+        delay = 0.4;
 
         // inizializzo le latenze per il nodo sospetto, così da vederne il cambiamento
         isCheater = UNKNOWN;
@@ -59,6 +61,8 @@ class StrategyIncrease : public StrategyCA
      */
     void registerMsgDelay(simtime_t msgDelay)
     {
+        double d = msgDelay.dbl();
+
         // aggiungo la nuova (divisa per NCHAMPIONS per essere pronta a far parte della media)
         msgDelay /= NCHAMPIONS;
 
@@ -66,18 +70,22 @@ class StrategyIncrease : public StrategyCA
         {
             // aggiorno la stima della latenza media sul canale
             averageLatency += msgDelay;
+
+            d = averageLatency.dbl();
         }
         else
         {
             // aggiorno la stima della latenza media sul canale
             oldSuspectedLatency += msgDelay;
+
+            d = oldSuspectedLatency.dbl();
         }
 
         index++; // incremento index per il prossimo messaggio
 
         if(index == NCHAMPIONS) // se ho fatto il giro del vettore (e sono il leader)
         {
-            printf("%Ritardo medio dal nodo sospetto: %f (old: %f, threshold: %f). \n", msgDelay.dbl(),
+            printf("%Ritardo medio dal nodo sospetto: %f (old: %f, threshold: %f). \n", averageLatency.dbl(),
                     oldSuspectedLatency.dbl(), threshold.dbl());
 
             if(doCA)
@@ -105,7 +113,7 @@ class StrategyIncrease : public StrategyCA
      */
     virtual void counterAttack()
     {
-        delay *= 1.02;      // aumento il delay
+        delay *= increaseFactor;      // aumento il delay
         averageLatency = 0;     // resetto la valutazione della latenza media
 
         //DEBUG

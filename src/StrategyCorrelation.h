@@ -66,7 +66,7 @@ class StrategyCorrelation : public StrategyCA
     virtual void setNewSuspect(int node)
     {
         suspectedNode = node;
-        index = 0;
+        index = -1;
 
         isCheater = UNKNOWN;
         // NB: non serve re-inizializzare gli array perché andranno riempiti completamente
@@ -81,23 +81,14 @@ class StrategyCorrelation : public StrategyCA
      */
     void registerMsgDelay(simtime_t msgDelay)
     {
-        rec[index] = msgDelay;
-
-        index++;
-        if(index < repetitions)
-            counterAttack();
-        else
+        if(index > 0)   // ignora eventuali messaggi ricevuto prima del contrattacco
         {
-            // THEN: calcolare correlazione
-            double correlation = correlationIndex();
+            rec[index] = msgDelay;
 
-            if(abs(correlation) >= minCorrelation)
-                // THEN: è etichettato come cheater
-                isCheater = CHEATER;
-            else
-                // ELSE: è etichettato come non-cheater
-                isCheater = NOT_CHEATER;
+            printf("x: %f\ty: %f\n", sent[index].dbl(), rec[index].dbl());
         }
+
+        counterAttack();
     }
 
 
@@ -112,7 +103,22 @@ class StrategyCorrelation : public StrategyCA
         double d = (double)rand() / RAND_MAX;
         delay = d;
 
-        sent[index] = delay;
+        index++;
+
+        if(index < repetitions)
+            sent[index] = delay;
+        else
+        {
+            // THEN: calcolare correlazione
+            double correlation = correlationIndex();
+
+            if(abs(correlation) >= minCorrelation)
+                // THEN: è etichettato come cheater
+                isCheater = CHEATER;
+            else
+                // ELSE: è etichettato come non-cheater
+                isCheater = NOT_CHEATER;
+        }
     }
 
 
