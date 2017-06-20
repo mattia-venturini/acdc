@@ -14,8 +14,6 @@
 #include <omnetpp/simtime_t.h>
 #include <random>
 
-#define NCHAMPIONS 6
-
 #define CHEATER 1       // valori di ritorno per isCheater
 #define NOT_CHEATER -1
 #define UNKNOWN 0
@@ -28,9 +26,11 @@ using namespace std;
  */
 class StrategyCA
 {
-  public:
-    int index = 0;                 // numero di latenze ricevute dall'ultimo incremento di delay
+  protected:
+    int nChampions;         // numero di latenze da ricevere tra un contrattacco e l'altro
+    int index = 0;          // numero di latenze ricevute dall'ultimo incremento di delay
 
+  public:
     // variabili utili al leader
     bool doCA = false;
     int suspectedNode = -1;

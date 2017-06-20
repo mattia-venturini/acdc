@@ -10,15 +10,18 @@
 
 
 /**
- * Strategia di contrattacco basilare per ACDC
+ * Strategia di contrattacco basilare per ACDC.
+ * Valuta la latenza media dal nodo sospetto, dopodiché comincia a ritardare i messaggi diretti verso di esso,
+ * per vedere se la latenza aumenta a sua volta.
+ * Ad ogni passo calcola la latenza media e se è più alta della prima, oltre una certa soglia, lo segnala come cheater
  */
 class StrategyIncrease : public StrategyCA
 {
   protected:
     double increaseFactor = 1.2;    // fattore moltiplicativo con cui si incrementa il delay
 
-    simtime_t delayLimit = 10.0;
-    simtime_t threshold = 1.0;   // soglia oltre cui un nodo è dichiarato cheater
+    simtime_t delayLimit;
+    simtime_t threshold;   // soglia oltre cui un nodo è dichiarato cheater
 
     simtime_t averageLatency = 0;    // latenza media dei messaggi dal nodo sospetto, considerando gli ultimi NCHAMPIONS messaggi
     simtime_t oldSuspectedLatency = 0;
@@ -27,13 +30,12 @@ class StrategyIncrease : public StrategyCA
     /**
      * COSTRUTTORE
      */
-    StrategyIncrease()
-    { }
-
     StrategyIncrease(simtime_t CAlimit, simtime_t gamma)
     {
         delayLimit = CAlimit;
         threshold = gamma;
+
+        nChampions = 6;
     }
 
     /**
@@ -44,7 +46,7 @@ class StrategyIncrease : public StrategyCA
     {
         suspectedNode = node;
         doCA = false;
-        delay = 0.4;
+        delay = 0.1;
 
         // inizializzo le latenze per il nodo sospetto, così da vederne il cambiamento
         isCheater = UNKNOWN;
@@ -64,7 +66,7 @@ class StrategyIncrease : public StrategyCA
         double d = msgDelay.dbl();
 
         // aggiungo la nuova (divisa per NCHAMPIONS per essere pronta a far parte della media)
-        msgDelay /= NCHAMPIONS;
+        msgDelay /= nChampions;
 
         if(doCA)
         {
@@ -83,7 +85,7 @@ class StrategyIncrease : public StrategyCA
 
         index++; // incremento index per il prossimo messaggio
 
-        if(index == NCHAMPIONS) // se ho fatto il giro del vettore (e sono il leader)
+        if(index == nChampions) // se ho fatto il giro del vettore (e sono il leader)
         {
             printf("%Ritardo medio dal nodo sospetto: %f (old: %f, threshold: %f). \n", averageLatency.dbl(),
                     oldSuspectedLatency.dbl(), threshold.dbl());

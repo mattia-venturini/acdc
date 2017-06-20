@@ -33,8 +33,6 @@
 #define INFO_TOKEN_RELEASED 6       // fucsia
 #define INFO_CHEATER_DETECTED 7     // nero
 
-#define TIME_LEADER 40.0
-
 using namespace omnetpp;
 using namespace std;
 
@@ -66,7 +64,7 @@ class Peer : public cSimpleModule
     int references;   // numero di nodi che hanno etichettato un sospetto come cheater
 
     // variabili per il cheater
-    simtime_t intervalS = 0.8;    // finestra di tempo in cui raccoglie messaggi prima di decidere la propria mossa
+    simtime_t intervalS = 0.18;    // finestra di tempo in cui raccoglie messaggi prima di decidere la propria mossa
     simtime_t minTimestamp = 0.0;
 
     virtual void initialize();

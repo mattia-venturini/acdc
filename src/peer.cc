@@ -87,7 +87,7 @@ void Peer::initialize()
         // imposta la scadenza del tempo come leader
         cMessage *timeout = new cMessage();
         timeout->setKind(TIMEOUT_LEADER);
-        scheduleAt(simTime()+TIME_LEADER, timeout);
+        scheduleAt(simTime()+timeoutLeader, timeout);
     }
     else    // non parte come leader => bianco
     {
@@ -130,6 +130,8 @@ void Peer::handleMessage(cMessage *msg)
                     nextLeader = random->intRand(nLinks);
                 } while(!activeLink[nextLeader]); // se ho preso il cheater riprovo
 
+                // variazione casuale della latenza
+                ((cDelayChannel*)gate("gate$o", nextLeader)->getChannel())->setDelay(uniform(minLatency,maxLatency).dbl());
                 send(token, "gate$o", nextLeader);
 
                 printf("%f: Token riasciato per timeout. \n", simTime().dbl());
@@ -147,6 +149,9 @@ void Peer::handleMessage(cMessage *msg)
         {
             // NB: potrebbe aver ceduto il TOKEN_LEADER nel frattempo, quindi verifico se sono ancora leader
             // NB: potrebbero non esserci sospetti (unico nodo attivo)
+
+            // variazione casuale della latenza
+            ((cDelayChannel*)gate("gate$o", strategy->suspectedNode)->getChannel())->setDelay(uniform(minLatency,maxLatency).dbl());
             send(msg->dup(), "gate$o", strategy->suspectedNode);
         }
 
@@ -206,6 +211,8 @@ void Peer::handleMessage(cMessage *msg)
                                 nextLeader = random->intRand(nLinks);
                             } while(nextLeader == i || !activeLink[nextLeader]); // se ho preso il cheater riprovo
 
+                            // variazione casuale della latenza
+                            ((cDelayChannel*)gate("gate$o", nextLeader)->getChannel())->setDelay(uniform(minLatency,maxLatency).dbl());
                             send(msg->dup(), "gate$o", nextLeader);
                         }
                         else
@@ -228,7 +235,7 @@ void Peer::handleMessage(cMessage *msg)
             // imposta la scadenza del tempo come leader
             cMessage *timeout = new cMessage();
             timeout->setKind(TIMEOUT_LEADER);
-            scheduleAt(simTime()+TIME_LEADER, timeout);
+            scheduleAt(simTime()+timeoutLeader, timeout);
 
         }
 
@@ -342,11 +349,6 @@ void Peer::checkLatency(cMessage *msg, int numGate)
     // calcolo latenza del messaggio
     simtime_t msgDelay = simTime() - msg->getTimestamp();
 
-    // DEBUG
-    double d1 = simTime().dbl();
-    double d2 = msg->getTimestamp().dbl();
-    double d3 = msgDelay.dbl();
-
     diffVector.record(msgDelay);  // raccolta dati per statistiche
 
     strategy->registerMsgDelay(msgDelay);    // aggiunge la latenza ai propri dati
@@ -362,7 +364,7 @@ void Peer::checkLatency(cMessage *msg, int numGate)
         references++;               // un sospetto in più = nodo corrente
 
         // verifico se ho raggiunto la maggioranza
-        if(references >= nActivePeers/2)
+        if(references >= (nActivePeers+1)/2)    // metà arrotondata per difetto
         {
             // THEN: escludo il nodo dalla rete
 
@@ -418,6 +420,8 @@ void Peer::checkLatency(cMessage *msg, int numGate)
             paramRefs->setLongValue(references);
             token->addPar(paramRefs);
 
+            // variazione casuale del delay
+            ((cDelayChannel*)gate("gate$o", nextLeader)->getChannel())->setDelay(uniform(minLatency,maxLatency).dbl());
             send(token, "gate$o", nextLeader);
 
 

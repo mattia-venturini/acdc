@@ -19,43 +19,35 @@ using namespace std;
 
 /**
  * Strategia alternativa per ACDC
- * Si occupa di creare un ritardo casuale verso il nodo sospetto e verifica la correlazione dei suoi ritardi
+ * Si occupa di creare un ritardo casuale verso il nodo sospetto e verifica la correlazione dei suoi ritardi.
  */
 class StrategyCorrelation : public StrategyCA
 {
   protected:
-    //cRNG *random;       // per creare il ritardo casuale
+    cRNG *random;       // per creare il ritardo casuale
     int repetitions;    // numero di messaggio che usa per calcolare la correlazione
     double minCorrelation = 0.5;   // soglia oltre cui un nodo è dichiarato cheater
 
     // dati di trasmissione e ricezione
     simtime_t *sent;
     simtime_t *rec;
+    int indexRec;
 
   public:
     /**
      * COSTRUTTORE
      */
-    StrategyCorrelation(cRNG *rng, int rep)
-    {
-        //random = new rng;
-        repetitions = rep;
-
-        sent = new simtime_t[repetitions];
-        rec = new simtime_t[repetitions];
-
-        doCA = true;
-    }
-
     StrategyCorrelation(cRNG *rng, int rep, double minCorr)
     {
         minCorrelation = minCorr;
+        random = rng;
         repetitions = rep;
 
         sent = new simtime_t[repetitions];
         rec = new simtime_t[repetitions];
 
         doCA = true;
+        nChampions = 4;
     }
 
 
@@ -67,9 +59,12 @@ class StrategyCorrelation : public StrategyCA
     {
         suspectedNode = node;
         index = -1;
+        indexRec = -1;
 
         isCheater = UNKNOWN;
-        // NB: non serve re-inizializzare gli array perché andranno riempiti completamente
+
+        for(int i = 0; i < repetitions; i++)
+            sent[i] = rec[i] = 0;
     }
 
 
@@ -81,14 +76,24 @@ class StrategyCorrelation : public StrategyCA
      */
     void registerMsgDelay(simtime_t msgDelay)
     {
-        if(index > 0)   // ignora eventuali messaggi ricevuto prima del contrattacco
+        if(indexRec >= 0)   // ignora eventuali messaggi ricevuto prima del contrattacco
         {
-            rec[index] = msgDelay;
+            if(index++ < 0)
+                return;
 
-            printf("x: %f\ty: %f\n", sent[index].dbl(), rec[index].dbl());
+            // memorizza in rec la media degli NCHAMPIONS ritardi
+            rec[indexRec] += msgDelay/nChampions;
+            //index++;
+
+            if(index == nChampions)     // cambio di delay dopo un certo numero di messaggi
+            {
+                printf("x: %f\ty: %f\n", sent[indexRec].dbl(), rec[indexRec].dbl());    // DEBUG
+
+                counterAttack();
+            }
         }
-
-        counterAttack();
+        else
+            counterAttack();    // primo cambio di delay
     }
 
 
@@ -99,18 +104,21 @@ class StrategyCorrelation : public StrategyCA
      */
     virtual void counterAttack()
     {
-        //double d = random->doubleRand();      // cambio il delay
-        double d = (double)rand() / RAND_MAX;
+        double d = random->doubleRand() * 0.4;      // cambio il delay (compreso tra 0 e 0.4 s)
+        //double d = (double)rand() / RAND_MAX;
         delay = d;
 
-        index++;
+        index = -1;  // re-cicla per NCHAMPIONS volte (e scarta il primo)
+        indexRec++;
 
-        if(index < repetitions)
-            sent[index] = delay;
+        if(indexRec < repetitions)     // ho ripetuto con un numero sufficente di delay diversi?
+            sent[indexRec] = delay;
         else
         {
-            // THEN: calcolare correlazione
+            // ELSE: calcolare correlazione
             double correlation = correlationIndex();
+
+            printf("------> Correlazione: %f\n", correlation);  // DEBUG
 
             if(abs(correlation) >= minCorrelation)
                 // THEN: è etichettato come cheater
@@ -146,9 +154,12 @@ class StrategyCorrelation : public StrategyCA
         // calcolo delle varianze dei ritardi
         for(int i = 0; i < repetitions; i++)
         {
-            stddevSent += (sent[i] - avgSent).dbl() * (sent[i] - avgSent).dbl();
-            stddevRec += (rec[i] - avgRec).dbl() * (rec[i] - avgRec).dbl();
-            covariance += (sent[i] - avgSent).dbl() * (rec[i] - avgRec).dbl();
+            double d1 = (sent[i] - avgSent).dbl();
+            double d2 = (rec[i] - avgRec).dbl();
+
+            stddevSent += d1 * d1;
+            stddevRec += d2 * d2;
+            covariance += d1 * d2;
         }
         stddevSent /= repetitions;
         stddevRec /= repetitions;
