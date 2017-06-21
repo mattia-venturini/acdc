@@ -18,29 +18,79 @@ import ned.DelayChannel;
 
 
 //
-// TODO documentation
+// Rete P2P di nodi che simulano un gioco.
+// Alcuni di essi possono sfruttare il look-ahead cheat.
+// Nella rete viaggia un token, chi lo possiede diventa il leader e si occupa di individuare i cheater tramite l'algoritmo ACDC
 //
 network Network
 {
-    @display("bgb=754,353");
+    parameters:
+        @display("bgb=754,353");
+        // parametri di rete
+        double minLatency @unit(s) = default(0.05s);
+        double maxLatency @unit(s) = default(0.15s);
+
+        // tipo di strategia per ACDC ("increase", "correlation")
+        string strategy = "increase";
+
+        double timeoutLeader @unit(s) = default(40.00s);
+
+        // parametri della strategia "increase"
+        double delayLimit @unit(s) = default(0.80s);
+        double threshold @unit(s) = default(0.10s);
+
+        // parametri della strategia "correlation"
+        int repetitions = default(10);
+        double minCorrelation = default(0.62);
+
+        // parametri dei Peer
+        double minGenTime = default(0.10);
+        double maxGenTime = default(0.20);
+
     submodules:
         peer0: Peer {
-            @display("p=195,106");
-            sendInitialMessage = true;
-            generationTime = uniform(0.90, 1.50);
+            @display("p=242,77");
+            generationTime = uniform(minGenTime, maxGenTime);
         }
         peer1: Peer {
-            @display("p=429,106");
-            generationTime = uniform(0.90, 1.50);
-            cheater = true;
+            @display("p=381,77");
+            generationTime = uniform(minGenTime, maxGenTime);
         }
         peer2: Peer {
-            @display("p=323,244");
-            generationTime = uniform(0.90, 1.50);
+            @display("p=456,185");
+            generationTime = uniform(minGenTime, maxGenTime);
+            cheater = true;
         }
+        peer3: Peer {
+            @display("p=371,282");
+            generationTime = uniform(minGenTime, maxGenTime);
+        }
+
+        peer4: Peer {
+            @display("p=242,282");
+            generationTime = uniform(minGenTime, maxGenTime);
+        }
+
+        peer5: Peer {
+            @display("p=161,185");
+            generationTime = uniform(minGenTime, maxGenTime);
+        }
+
     connections:
-        peer0.gate++ <--> DelayChannel {  delay = exponential(1.00s); } <--> peer1.gate++;
-        peer0.gate++ <--> DelayChannel {  delay = exponential(1.00s); } <--> peer2.gate++;
-        peer2.gate++ <--> DelayChannel {  delay = exponential(1.00s); } <--> peer1.gate++;
+        peer0.gate++ <--> DelayChannel <--> peer1.gate++;
+        peer0.gate++ <--> DelayChannel <--> peer2.gate++;
+        peer2.gate++ <--> DelayChannel <--> peer1.gate++;
+        peer0.gate++ <--> DelayChannel <--> peer3.gate++;
+        peer1.gate++ <--> DelayChannel <--> peer3.gate++;
+        peer2.gate++ <--> DelayChannel <--> peer3.gate++;
+        peer0.gate++ <--> DelayChannel <--> peer4.gate++;
+        peer0.gate++ <--> DelayChannel <--> peer5.gate++;
+        peer1.gate++ <--> DelayChannel <--> peer4.gate++;
+        peer1.gate++ <--> DelayChannel <--> peer5.gate++;
+        peer2.gate++ <--> DelayChannel <--> peer4.gate++;
+        peer2.gate++ <--> DelayChannel <--> peer5.gate++;
+        peer3.gate++ <--> DelayChannel <--> peer4.gate++;
+        peer3.gate++ <--> DelayChannel <--> peer5.gate++;
+        peer4.gate++ <--> DelayChannel <--> peer5.gate++;
 }
 

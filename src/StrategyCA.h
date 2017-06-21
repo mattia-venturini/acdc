@@ -64,6 +64,7 @@ class StrategyCA
     {
         return isCheater;
     }
+
 };
 
 

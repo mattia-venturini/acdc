@@ -20,6 +20,7 @@
 #include <omnetpp/csimplemodule.h>
 #include <omnetpp/simtime_t.h>
 #include <random>
+#include <list>
 
 #include "StrategyCA.h"
 #include "StrategyIncrease.h"
@@ -32,6 +33,7 @@
 #define TIMEOUT_LEADER 5        // azzurro
 #define INFO_TOKEN_RELEASED 6       // fucsia
 #define INFO_CHEATER_DETECTED 7     // nero
+#define MSG_UNUSED 0
 
 using namespace omnetpp;
 using namespace std;
@@ -49,13 +51,17 @@ class Peer : public cSimpleModule
     simtime_t timeoutLeader;
     simtime_t minLatency;
     simtime_t maxLatency;
-
+    simtime_t minGenTime;
+    simtime_t maxGenTime;
 
   protected:
     int nActivePeers;   // numero di Peer non cheater
     int nLinks;         // numero di Peer a cui è connesso
     int *idPeers;       // memorizza per ogni gate l'id del Peer a cui connette
     bool *activeLink;   // per ogni gate indica se il nodo è ritenuto onesto (true) o cheater (false)
+
+    list<cMessage*> scheduledList;  // lista di eventi schedulati dal leader che vanno cancellati se cambia il nodo sospetto
+    cMessage *timeout;          // timeout del leader, dev'essere cancellato se passa il token
 
     StrategyCA *strategy;
 
@@ -67,8 +73,12 @@ class Peer : public cSimpleModule
     simtime_t intervalS = 0.18;    // finestra di tempo in cui raccoglie messaggi prima di decidere la propria mossa
     simtime_t minTimestamp = 0.0;
 
+
+    // PROTOTIPI DEI METODI ----------------------------------------------------
+
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);
+    virtual void finish();
 
     void scheduleNextMessage();
     void sendToAll(cMessage *msg);
@@ -77,8 +87,24 @@ class Peer : public cSimpleModule
     void checkLatency(cMessage *msg, int numGate);
     int setSuspectNode();
 
-  private:      // PER VEDERE STATISTICHE
-    cOutVector diffVector;
+    ~Peer();    // DESTRUCTOR
+
+
+  private:
+    // variabili per analisi statistiche
+    simtime_t timeStartDetection;   // utile per calcolare il timeDetectionSignal
+
+    // segnali per analisi statistiche
+    simsignal_t timeDetectionPosSignal;
+    simsignal_t timeDetectionNegSignal;
+
+  public:
+    // statiche perché complessive per tutti i Peer
+    static int nTP;        // True Positives
+    static int nTN;        // True Negatives
+    static int nFP;        // False Positives
+    static int nFN;        // False Negatives
+
 
 };
 

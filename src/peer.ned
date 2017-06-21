@@ -16,7 +16,7 @@
 package acdc;
 
 //
-// TODO auto-generated module
+// Nodo di una rete P2P
 //
 simple Peer
 {
@@ -24,6 +24,15 @@ simple Peer
         bool sendInitialMessage = default(false);
         double generationTime = default(1);
         bool cheater = default(false);
+        
+        // statistiche
+        @signal[timeDetectionPos](type="double");
+        @statistic[timeDetectionPos](title="Time of positive detections"; record=vector,mean);
+        @signal[timeDetectionNeg](type="double");
+        @statistic[timeDetectionNeg](title="Time of negative detections"; record=vector,mean);
+        @signal[nIncrease](type="long");
+        @statistic[nIncrease](title="Number of increment per detection"; record=vector,mean);
+        
     gates:
         inout gate[];
 }

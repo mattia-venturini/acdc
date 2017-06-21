@@ -87,7 +87,7 @@ class StrategyCorrelation : public StrategyCA
 
             if(index == nChampions)     // cambio di delay dopo un certo numero di messaggi
             {
-                printf("x: %f\ty: %f\n", sent[indexRec].dbl(), rec[indexRec].dbl());    // DEBUG
+                //printf("x: %f\ty: %f\n", sent[indexRec].dbl(), rec[indexRec].dbl());    // DEBUG
 
                 counterAttack();
             }
@@ -118,7 +118,7 @@ class StrategyCorrelation : public StrategyCA
             // ELSE: calcolare correlazione
             double correlation = correlationIndex();
 
-            printf("------> Correlazione: %f\n", correlation);  // DEBUG
+            //printf("------> Correlazione: %f\n", correlation);  // DEBUG
 
             if(abs(correlation) >= minCorrelation)
                 // THEN: è etichettato come cheater

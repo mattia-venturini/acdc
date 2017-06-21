@@ -18,7 +18,7 @@
 class StrategyIncrease : public StrategyCA
 {
   protected:
-    double increaseFactor = 1.2;    // fattore moltiplicativo con cui si incrementa il delay
+    const double increaseFactor = 1.5;    // fattore moltiplicativo con cui si incrementa il delay
 
     simtime_t delayLimit;
     simtime_t threshold;   // soglia oltre cui un nodo è dichiarato cheater
@@ -63,8 +63,6 @@ class StrategyIncrease : public StrategyCA
      */
     void registerMsgDelay(simtime_t msgDelay)
     {
-        double d = msgDelay.dbl();
-
         // aggiungo la nuova (divisa per NCHAMPIONS per essere pronta a far parte della media)
         msgDelay /= nChampions;
 
@@ -72,23 +70,19 @@ class StrategyIncrease : public StrategyCA
         {
             // aggiorno la stima della latenza media sul canale
             averageLatency += msgDelay;
-
-            d = averageLatency.dbl();
         }
         else
         {
             // aggiorno la stima della latenza media sul canale
             oldSuspectedLatency += msgDelay;
-
-            d = oldSuspectedLatency.dbl();
         }
 
         index++; // incremento index per il prossimo messaggio
 
         if(index == nChampions) // se ho fatto il giro del vettore (e sono il leader)
         {
-            printf("%Ritardo medio dal nodo sospetto: %f (old: %f, threshold: %f). \n", averageLatency.dbl(),
-                    oldSuspectedLatency.dbl(), threshold.dbl());
+            //printf("----> Ritardo medio dal nodo sospetto: %f (old: %f, threshold: %f). \n", averageLatency.dbl(),
+            //        oldSuspectedLatency.dbl(), threshold.dbl());
 
             if(doCA)
             {
@@ -119,7 +113,7 @@ class StrategyIncrease : public StrategyCA
         averageLatency = 0;     // resetto la valutazione della latenza media
 
         //DEBUG
-        printf("ritardo del leader: %f\n", delay.dbl());
+        //printf("ritardo del leader: %f\n", delay.dbl());
 
         if(delay >= delayLimit) // se ho superato una certa soglia di delay
         {
