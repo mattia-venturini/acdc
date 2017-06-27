@@ -81,9 +81,6 @@ class StrategyIncrease : public StrategyCA
 
         if(index == nChampions) // se ho fatto il giro del vettore (e sono il leader)
         {
-            //printf("----> Ritardo medio dal nodo sospetto: %f (old: %f, threshold: %f). \n", averageLatency.dbl(),
-            //        oldSuspectedLatency.dbl(), threshold.dbl());
-
             if(doCA)
             {
                 // verifico se il ritardo medio è aumentato troppo
@@ -112,14 +109,9 @@ class StrategyIncrease : public StrategyCA
         delay *= increaseFactor;      // aumento il delay
         averageLatency = 0;     // resetto la valutazione della latenza media
 
-        //DEBUG
-        //printf("ritardo del leader: %f\n", delay.dbl());
-
         if(delay >= delayLimit) // se ho superato una certa soglia di delay
-        {
             // THEN: ritengo che il nodo non è un cheater
             isCheater = NOT_CHEATER;
-        }
     }
 
 };

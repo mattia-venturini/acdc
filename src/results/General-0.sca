@@ -1,0 +1,60 @@
+version 2
+run General-0-20170627-10:55:25-6656
+attr configname General
+attr datetime 20170627-10:55:25
+attr experiment General
+attr inifile omnetpp.ini
+attr iterationvars ""
+attr iterationvars2 $repetition=0
+attr measurement ""
+attr network Network
+attr processid 6656
+attr repetition 0
+attr replication #0
+attr resultdir results
+attr runnumber 0
+attr seedset 0
+
+scalar Network.peer0 	"True Positives " 	3
+scalar Network.peer0 	"True Negatives" 	24
+scalar Network.peer0 	"False Positives" 	0
+scalar Network.peer0 	"Fase Negatives" 	0
+scalar Network.peer0 	Precision 	1
+scalar Network.peer0 	Recall 	1
+scalar Network.peer0 	F-measure 	1
+scalar Network.peer0 	nIncrease:mean 	-nan
+attr title  "Number of increment per detection, mean"
+scalar Network.peer0 	timeDetectionNeg:mean 	13.415575652031
+attr title  "Time of negative detections, mean"
+scalar Network.peer0 	timeDetectionPos:mean 	16.196698434315
+attr title  "Time of positive detections, mean"
+scalar Network.peer1 	nIncrease:mean 	-nan
+attr title  "Number of increment per detection, mean"
+scalar Network.peer1 	timeDetectionNeg:mean 	13.645591094727
+attr title  "Time of negative detections, mean"
+scalar Network.peer1 	timeDetectionPos:mean 	16.288306701784
+attr title  "Time of positive detections, mean"
+scalar Network.peer2 	nIncrease:mean 	-nan
+attr title  "Number of increment per detection, mean"
+scalar Network.peer2 	timeDetectionNeg:mean 	-nan
+attr title  "Time of negative detections, mean"
+scalar Network.peer2 	timeDetectionPos:mean 	-nan
+attr title  "Time of positive detections, mean"
+scalar Network.peer3 	nIncrease:mean 	-nan
+attr title  "Number of increment per detection, mean"
+scalar Network.peer3 	timeDetectionNeg:mean 	13.400009278445
+attr title  "Time of negative detections, mean"
+scalar Network.peer3 	timeDetectionPos:mean 	16.295639902391
+attr title  "Time of positive detections, mean"
+scalar Network.peer4 	nIncrease:mean 	-nan
+attr title  "Number of increment per detection, mean"
+scalar Network.peer4 	timeDetectionNeg:mean 	13.201061047572
+attr title  "Time of negative detections, mean"
+scalar Network.peer4 	timeDetectionPos:mean 	-nan
+attr title  "Time of positive detections, mean"
+scalar Network.peer5 	nIncrease:mean 	-nan
+attr title  "Number of increment per detection, mean"
+scalar Network.peer5 	timeDetectionNeg:mean 	13.559390234632
+attr title  "Time of negative detections, mean"
+scalar Network.peer5 	timeDetectionPos:mean 	-nan
+attr title  "Time of positive detections, mean"

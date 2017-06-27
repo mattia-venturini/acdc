@@ -41,7 +41,7 @@ using namespace std;
 namespace acdc {
 
 /**
- * Generated class
+ * Modulo relativo ad un componente di una rete P2P
  */
 class Peer : public cSimpleModule
 {
@@ -63,7 +63,7 @@ class Peer : public cSimpleModule
     list<cMessage*> scheduledList;  // lista di eventi schedulati dal leader che vanno cancellati se cambia il nodo sospetto
     cMessage *timeout;          // timeout del leader, dev'essere cancellato se passa il token
 
-    StrategyCA *strategy;
+    StrategyCA *strategy;       // gestisce il metodo di contrattacco, implementato come StrategyIncrease o StrategyCorrelation
 
     // variabili utili al leader
     bool leader = false;
@@ -86,8 +86,6 @@ class Peer : public cSimpleModule
     void cheatedMove();
     void checkLatency(cMessage *msg, int numGate);
     int setSuspectNode();
-
-    ~Peer();    // DESTRUCTOR
 
 
   private:

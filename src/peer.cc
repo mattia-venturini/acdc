@@ -94,8 +94,8 @@ void Peer::initialize()
         // lo coloro di blue
         getDisplayString().setTagArg("b",3,"blue");
 
-        strategy->setNewSuspect(setSuspectNode());  // comincia a verificare un nodo
-        timeStartDetection = simTime();
+        strategy->setNewSuspect(setSuspectNode());  // comincia a verificare un nodo (a caso)
+        timeStartDetection = simTime();     // serve per calcolare i tempi di verifica
 
         // imposta la scadenza del tempo come leader
         timeout = new cMessage();
@@ -122,10 +122,12 @@ void Peer::initialize()
 }
 
 
-// gestisce un messaggio in ingresso
+/*
+ *  Gestisce un messaggio in ingresso, differenziato in base al Kind e dal fatto che sia o no un selfMessage
+ */
 void Peer::handleMessage(cMessage *msg)
 {
-    // inviato da sé stesso per schedulare un evento futuro
+    // selfMessage: inviato da sé stesso per schedulare un evento futuro
     if(msg->isSelfMessage())
     {
         if(msg->getKind() == TIMEOUT_LEADER && leader)   // timeout del leader
@@ -152,8 +154,6 @@ void Peer::handleMessage(cMessage *msg)
                 ((cDelayChannel*)gate("gate$o", nextLeader)->getChannel())->setDelay(uniform(minLatency,maxLatency).dbl());
                 send(token, "gate$o", nextLeader);
 
-                //printf("%f: Token riasciato per timeout. \n", simTime().dbl());
-
                 // avviso tutti che il TOKEN_LEADER è stato rilasciato
                 cMessage *infoMsg = new cMessage();
                 infoMsg->setKind(INFO_TOKEN_RELEASED);
@@ -172,7 +172,6 @@ void Peer::handleMessage(cMessage *msg)
             ((cDelayChannel*)gate("gate$o", strategy->suspectedNode)->getChannel())->setDelay(uniform(minLatency,maxLatency).dbl());
             send(msg->dup(), "gate$o", strategy->suspectedNode);
 
-            //scheduledList.pop_front();
             scheduledList.remove(msg);
         }
 
@@ -194,17 +193,11 @@ void Peer::handleMessage(cMessage *msg)
     // messaggio ricevuto da un altro nodo (attivo)
     else if(activeLink[msg->getArrivalGate()->getIndex()])
     {
-        // DEBUG
-        if(leader && msg->getArrivalGate()->getIndex() == strategy->suspectedNode)
-            //printf("rit. in %s da %i: %f\n", getName(), msg->getArrivalGate()->getIndex(),
-                simTime().dbl() - msg->getTimestamp().dbl());
-
         // token che mi rende il leader
         if(msg->getKind() == TOKEN_LEADER)
         {
-            //printf("\n%s è il nuovo LEADER!\n", getName());
-
             leader = true;
+
             // per vedere graficamente il cambiamento
             getDisplayString().setTagArg("b",3,"blue");
 
@@ -321,6 +314,7 @@ void Peer::scheduleNextMessage()
  */
 void Peer::sendToAll(cMessage *msg)
 {
+    // itera sulla uscite del gate
     for(int j=0; j<gateSize("gate"); j++)
     {
         // se è leader: messaggio in ritardo per il nodo sospetto
@@ -333,7 +327,9 @@ void Peer::sendToAll(cMessage *msg)
 
             scheduledList.push_back(msgACDC);   // memorizza (può servire per annullarlo in futuro)
         }
-        else if(activeLink[j])    // messaggio per tutti gli altri nodi (attivi)
+
+        // messaggio per tutti gli altri nodi (attivi)
+        else if(activeLink[j])
         {
             cMessage *copy = msg->dup();
 
@@ -354,12 +350,13 @@ void Peer::cheatedMove()
     cMessage *move = new cMessage();
 
     if(minTimestamp > 1.0)      // evita di impostare un timestamp negativo
-        move->setTimestamp(minTimestamp - 0.2);    // mossa cheated: timestamp immediatamente inferiore
+        move->setTimestamp(minTimestamp - 0.05);    // mossa cheated: timestamp immediatamente inferiore
     else
         move->setTimestamp();   // nessun messaggio ricevuto: mossa normale
 
     sendToAll(move);
 
+    // schedula la prossima mossa
     minTimestamp = simTime()+intervalS; // timestamp "giusto" della prossima mossa
 
     cMessage *endInterval = new cMessage();
@@ -373,40 +370,35 @@ void Peer::cheatedMove()
  */
 void Peer::checkLatency(cMessage *msg, int numGate)
 {
-    // calcolo latenza del messaggio
+    // latenza del messaggio
     simtime_t msgDelay = simTime() - msg->getTimestamp();
-
-    //diffVector.record(msgDelay);  // raccolta dati per statistiche
 
     strategy->registerMsgDelay(msgDelay);    // aggiunge la latenza ai propri dati
 
-    // verifica se il nodo risulta un cheater
+    // verifica se il nodo risulta un cheater (in base alla strategia adottata)
     if(strategy->isCheaterDetected() == CHEATER)
     {
-        // THEN: nodo etichettati come cheater
+        // THEN: nodo etichettato come cheater
 
         // misura il tempo totale impiegato dall'algoritmo
         emit(timeDetectionPosSignal, (simTime() - timeStartDetection).dbl());
 
-        // verifica (a livello statistico) della correttezza
+        // verifica (solo a scopo statistico) della correttezza
         cModule *suspModule = gate("gate$o", numGate)->getPathEndGate()->getOwnerModule();
         if(suspModule->par("cheater"))
-            nTP++;
+            nTP++;  // vero positivo
         else
-            nFP++;
+            nFP++;  // falso positivo
 
         // ricavo, a partire da numGate, l'ID del nodo a cui sono collegato
         int suspId = idPeers[numGate];
 
-        references++;               // un sospetto in più = nodo corrente
+        references++;       // un sospetto in più = nodo corrente
 
         // verifico se ho raggiunto la maggioranza
         if(references >= (nActivePeers+1)/2)    // metà arrotondata per difetto
         {
             // THEN: escludo il nodo dalla rete
-
-            //printf("CHEATER INDIVIDUATO: %d!\n", suspId);
-
 
             activeLink[strategy->suspectedNode] = false;    // setto il collegamento come inattivo
 
@@ -473,9 +465,6 @@ void Peer::checkLatency(cMessage *msg, int numGate)
             // per vedere graficamente il cambiamento
             getDisplayString().setTagArg("b",3,"white");
 
-            // DEBUG
-            //printf("%s: TOKEN_LEADER rilasciato. \n", getName());
-
             // ignoro il mio vecchio timeout
             timeout->setKind(MSG_UNUSED);
 
@@ -488,17 +477,18 @@ void Peer::checkLatency(cMessage *msg, int numGate)
         }
 
     }
+    // se posso dichiarare il nodo come onesto
     else if(strategy->isCheaterDetected() == NOT_CHEATER)
     {
         // misura il tempo totale dell'algoritmo
         emit(timeDetectionNegSignal, (simTime() - timeStartDetection).dbl());
 
-        // verifica (a livello statistico) della correttezza
+        // verifica (a scopo statistico) della correttezza
         cModule *suspModule = gate("gate$o", numGate)->getPathEndGate()->getOwnerModule();
         if(suspModule->par("cheater"))
-            nFN++;
+            nFN++;  // falso negativo
         else
-            nTN++;
+            nTN++;  // vero positivo
 
         // rimuovo i messaggi schedulati per il vecchio sospetto
         while(! scheduledList.empty())
@@ -554,16 +544,6 @@ void Peer::finish()
         recordScalar("Recall", recall);
         recordScalar("F-measure", Fmeasure);
     }
-}
-
-
-/**
- * DISTRUTTORE: è chiamato alla chiusura della simulazione, dealloca tutto ciò che è allocato nella classe
- */
-Peer::~Peer()
-{
-    delete idPeers;
-    delete activeLink;
 }
 
 

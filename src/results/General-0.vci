@@ -1,22 +1,42 @@
-file 1399 1497520418                                            
+file 2318 1498553783                                            
 version 2
-run General-0-20170615-11:52:31-3380
+run General-0-20170627-10:55:25-6656
 attr configname General
-attr datetime 20170615-11:52:31
+attr datetime 20170627-10:55:25
 attr experiment General
 attr inifile omnetpp.ini
 attr iterationvars ""
 attr iterationvars2 $repetition=0
 attr measurement ""
 attr network Network
-attr processid 3380
+attr processid 6656
 attr repetition 0
 attr replication #0
 attr resultdir results
 attr runnumber 0
 attr seedset 0
 
-vector 0  Network.peer0  ""  ETV
-vector 1  Network.peer2  ""  ETV
-0	429 497 2 248 0.923223131471 30.923223131471 14 0.923223131471 15.961200560624 90.084458228257 861.09737523447
-1	926 473 110 236 14.55104848667 29.55104848667 13 3.506710256244 14.589025915823 112.57502124612 1146.6217220033
+vector 1  Network.peer0  timeDetectionNeg:vector  ETV
+attr title  "Time of negative detections, vector"
+vector 0  Network.peer0  timeDetectionPos:vector  ETV
+attr title  "Time of positive detections, vector"
+vector 3  Network.peer1  timeDetectionPos:vector  ETV
+attr title  "Time of positive detections, vector"
+vector 9  Network.peer3  timeDetectionPos:vector  ETV
+attr title  "Time of positive detections, vector"
+vector 10  Network.peer3  timeDetectionNeg:vector  ETV
+attr title  "Time of negative detections, vector"
+vector 13  Network.peer4  timeDetectionNeg:vector  ETV
+attr title  "Time of negative detections, vector"
+vector 4  Network.peer1  timeDetectionNeg:vector  ETV
+attr title  "Time of negative detections, vector"
+vector 16  Network.peer5  timeDetectionNeg:vector  ETV
+attr title  "Time of negative detections, vector"
+0	1198 39 7167 7167 29.932532154019 29.932532154019 1 16.196698434315 16.196698434315 16.196698434315 262.33304017214
+1	1237 121 3259 83697 13.735833719704 394.046274169535 3 12.728833505606 13.782059730784 40.246726956094 540.64150081169
+3	1358 40 11106 11106 46.322424285128 46.322424285128 1 16.288306701784 16.288306701784 16.288306701784 265.30893521138
+4	1398 82 39698 42427 180.936571957208 194.297940750289 2 13.361368793081 13.929813396372 27.291182189453 372.56587728246
+9	1480 40 15137 15137 62.951539490423 62.951539490423 1 16.295639902391 16.295639902391 16.295639902391 265.5478798284
+10	1520 421 17942 103050 76.470882791865 487.371732303004 10 13.122730051855 13.800778203693 134.00009278445 1796.0709287545
+13	1941 209 22768 92056 99.321326100216 434.404845782677 5 12.519443959631 13.828122395175 66.005305237859 872.44903552628
+16	2150 168 56149 75519 261.011381781794 354.566670109625 4 13.421668707875 13.716262379223 54.237560938529 735.48727147565

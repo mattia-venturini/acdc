@@ -1,0 +1,58 @@
+version 2
+run General-1-20170627-10:55:15-6630
+attr configname General
+attr datetime 20170627-10:55:15
+attr experiment General
+attr inifile omnetpp.ini
+attr iterationvars ""
+attr iterationvars2 $repetition=1
+attr measurement ""
+attr network Network
+attr processid 6630
+attr repetition 1
+attr replication #1
+attr resultdir results
+attr runnumber 1
+attr seedset 1
+
+vector 1  Network.peer0  timeDetectionNeg:vector  ETV
+attr title  "Time of negative detections, vector"
+vector 0  Network.peer0  timeDetectionPos:vector  ETV
+attr title  "Time of positive detections, vector"
+vector 9  Network.peer3  timeDetectionPos:vector  ETV
+attr title  "Time of positive detections, vector"
+vector 12  Network.peer4  timeDetectionPos:vector  ETV
+attr title  "Time of positive detections, vector"
+vector 13  Network.peer4  timeDetectionNeg:vector  ETV
+attr title  "Time of negative detections, vector"
+vector 16  Network.peer5  timeDetectionNeg:vector  ETV
+attr title  "Time of negative detections, vector"
+vector 10  Network.peer3  timeDetectionNeg:vector  ETV
+attr title  "Time of negative detections, vector"
+vector 4  Network.peer1  timeDetectionNeg:vector  ETV
+attr title  "Time of negative detections, vector"
+0	7093	29.587121387972	16.1554961155
+1	3190	13.431625272472	13.431625272472
+1	80686	379.8471346244	13.156852241328
+1	83534	393.625682201109	13.778547576709
+4	55950	260.348042819648	13.938314194441
+4	58681	273.509785952822	13.161743133174
+4	89132	420.551792778832	13.731276282168
+4	91913	434.004658971642	13.45286619281
+9	11064	45.995504453429	16.265296235792
+10	47554	219.809708588222	13.454552053382
+10	50372	233.534763500724	13.725054912502
+10	72444	340.114154450898	13.505297766905
+10	75288	353.847424395519	13.733269944621
+10	97486	460.895781153241	13.993533861903
+10	100329	474.776314540111	13.88053338687
+12	14963	62.369592326363	16.282339838003
+13	17755	75.86186171561	13.492269389247
+13	31005	139.815628724508	13.582236662563
+13	33848	153.383325138484	13.567696413976
+13	64123	299.865951223256	13.384743584417
+13	66918	313.44122741824	13.575276194984
+16	22714	99.686005209346	13.528763538326
+16	25502	113.287546233114	13.601541023768
+16	39318	179.904359957158	13.609806360166
+16	42056	193.254264308369	13.349904351211

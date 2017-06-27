@@ -130,6 +130,7 @@ $O/Txc.o: Txc.cc \
 	Txc.h
 $O/peer.o: peer.cc \
 	StrategyCA.h \
+	StrategyCorrelation.h \
 	StrategyIncrease.h \
 	peer.h
 

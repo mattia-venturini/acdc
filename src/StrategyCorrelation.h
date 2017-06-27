@@ -47,7 +47,7 @@ class StrategyCorrelation : public StrategyCA
         rec = new simtime_t[repetitions];
 
         doCA = true;
-        nChampions = 4;
+        nChampions = 8;
     }
 
 
@@ -58,7 +58,7 @@ class StrategyCorrelation : public StrategyCA
     virtual void setNewSuspect(int node)
     {
         suspectedNode = node;
-        index = -1;
+        index = -1; // -1 per scartare il primo pacchetto in arrivo (solitamente non attendibile)
         indexRec = -1;
 
         isCheater = UNKNOWN;
@@ -76,7 +76,7 @@ class StrategyCorrelation : public StrategyCA
      */
     void registerMsgDelay(simtime_t msgDelay)
     {
-        if(indexRec >= 0)   // ignora eventuali messaggi ricevuto prima del contrattacco
+        if(indexRec >= 0)   // ignora eventuali messaggi ricevuti prima del contrattacco
         {
             if(index++ < 0)
                 return;
@@ -86,11 +86,7 @@ class StrategyCorrelation : public StrategyCA
             //index++;
 
             if(index == nChampions)     // cambio di delay dopo un certo numero di messaggi
-            {
-                //printf("x: %f\ty: %f\n", sent[indexRec].dbl(), rec[indexRec].dbl());    // DEBUG
-
                 counterAttack();
-            }
         }
         else
             counterAttack();    // primo cambio di delay
@@ -117,8 +113,6 @@ class StrategyCorrelation : public StrategyCA
         {
             // ELSE: calcolare correlazione
             double correlation = correlationIndex();
-
-            //printf("------> Correlazione: %f\n", correlation);  // DEBUG
 
             if(abs(correlation) >= minCorrelation)
                 // THEN: è etichettato come cheater
